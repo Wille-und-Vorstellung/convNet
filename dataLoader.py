@@ -78,8 +78,8 @@ class dataLoader(object):
 		self._validate_mrc.read_image( validatePath )
 		self._data_ready = True
 
-		print("...MRC images reading complete")
-		logging.info( "...MRC images reading complete" )
+		print("... MRC images reading complete")
+		logging.info( "... MRC images reading complete" )
 		
 
 	def loadData(self, testRange, trainRange, validateRange,
@@ -109,21 +109,21 @@ class dataLoader(object):
 		for k in xrange( testRange[0], testRange[1] ):
 			for i in xrange( 0, self._test_mrc.get_xsize() ):
 				for j in xrange( 0, self._test_mrc.get_ysize() ):
-					self._test_data_x[k][i*self._imageSize[0] + j] = self._test_mrc.get_value_at(i, j, k) + 10
+					self._test_data_x[k - testRange[0]][i*self._imageSize[0] + j] = self._test_mrc.get_value_at(i, j, k) + 10
 
 		self._test_data_y = numpy.asarray( testY, dtype='int64' )
 
 		for k in xrange( trainRange[0], trainRange[1] ):
 			for i in xrange( 0, self._train_mrc.get_xsize() ):
 				for j in xrange( 0, self._train_mrc.get_ysize() ):
-					self._train_data_x[k][i*self._imageSize[0] + j] = self._train_mrc.get_value_at(i, j, k) + 10
+					self._train_data_x[k - testRange[0] ][i*self._imageSize[0] + j] = self._train_mrc.get_value_at(i, j, k) + 10
 		
 		self._train_data_y = numpy.asarray( trainY, dtype='int64' )
 
 		for k in xrange( validateRange[0], validateRange[1] ):
 			for i in xrange( 0, self._validate_mrc.get_xsize() ):
 				for j in xrange( 0, self._validate_mrc.get_ysize() ):
-					self._validate_data_x[k][i*self._imageSize[0] + j] = self._validate_mrc.get_value_at(i, j, k) + 10
+					self._validate_data_x[k - testRange[0] ][i*self._imageSize[0] + j] = self._validate_mrc.get_value_at(i, j, k) + 10
 
 		self._validate_data_y = numpy.asarray( validateY, dtype='int64' )
 
@@ -142,8 +142,8 @@ class dataLoader(object):
 		self._shared_validate_data_y_tmp = theano.shared(numpy.asarray(self._validate_data_y, dtype=theano.config.floatX), borrow=True)
 		self._shared_validate_data_y = T.cast( self._shared_validate_data_y_tmp, 'int64' )
 		
-		print("...Data reorganizing complete")
-		logging.info("...Data reorganizing complete")
+		print("... Data reorganizing complete")
+		logging.info("... Data reorganizing complete")
 		result =[( self._shared_test_data_x, self._shared_test_data_y ), 
 					( self._shared_train_data_x, self._shared_train_data_y ), 
 					( self._shared_validate_data_x, self._shared_validate_data_y )]

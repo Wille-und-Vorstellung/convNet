@@ -20,6 +20,7 @@ __author__ = "Ruogu Gao"
 import os
 import sys
 import timeit
+import logging
 
 import numpy
 import theano
@@ -30,7 +31,7 @@ from mlp import HiddenLayer
 from convolutional_mlp import LeNetConvPoolLayer
 from dataLoader import dataLoader
 
-
+logging.basicConfig( filename = 'convNet.log', level = logging.DEBUG )
 '''
 Phase_II_tips:
 	1. reload the constructor
@@ -40,7 +41,7 @@ Phase_II_tips:
 
 class ConvNet(object):
 	'''
-	the prototype convNet, convNet_Ex00
+	the prototype convNet, convNet_Ex02
 	'''
 	def __init__(self, randomSeed, 
 		filter_shape_1, image_shape_1, pool_size_1, 
@@ -51,7 +52,8 @@ class ConvNet(object):
 		'''
 		construct the basic structure of ConvNet: two convPooling layer, one normal hiddenlayer and a logistic
 		refer the LeNetConvPoolLayer for the input parameter meanings
-		NOTE	1.the input should be correctly transformed as 4D tensor or unpredictable behaviour might occur
+		NOTE	
+			1.the input should be correctly transformed as 4D tensor or unpredictable behaviour might occur
 			2.the input "filter_shape" implicitly determined the feature panel number in one LeNetConvPoolLayer
 			3.the downsample panel number is equal to it's feature panel and it's panel size are determined by pool_size
 		'''
@@ -174,7 +176,7 @@ class ConvNet(object):
 		self._epochN - epochN
 		'''
 		#basic training parameters
-		self._patience = 50;# run at least these many iterations, every iteration train on "_batchSize" numnber of data
+		self._patience = 10000;# run at least these many iterations, every iteration train on "_batchSize" numnber of data
 		self._patience_increase = 2
 		self._improvement_threshold = 0.995
 
@@ -183,6 +185,8 @@ class ConvNet(object):
 		self._total_validate_batchN = (self._validate_data_x.get_value(borrow=True).shape[0]) // self._batchSize
 
 		self._validate_frequence  = min( self._total_train_batchN , self._patience // 2 )
+		logging.info( "_total_train_batchN: " + str( self._total_train_batchN ) )
+		logging.info( "_validate_frequence: " + str( self._validate_frequence ) )
 
 		self._best_validate_loss_mean = numpy.inf
 		self._test_score = 0
@@ -334,18 +338,20 @@ class ConvNet(object):
 #set random seed 
 rSeed = numpy.random.RandomState( 33466 )
 instanceEx01 = ConvNet( randomSeed = rSeed, 
-		filter_shape_1 = ( 20, 1, 5, 5 ), image_shape_1 = ( 2, 1, 48, 54 ), pool_size_1 = ( 2, 2 ), 
-		filter_shape_2 = ( 50, 20, 5, 4 ), image_shape_2 = ( 2, 20, 22, 25 ), pool_size_2 = ( 2, 2 ),
+		filter_shape_1 = ( 20, 1, 5, 5 ), image_shape_1 = ( 10, 1, 48, 54 ), pool_size_1 = ( 2, 2 ), 
+		filter_shape_2 = ( 50, 20, 5, 4 ), image_shape_2 = ( 10, 20, 22, 25 ), pool_size_2 = ( 2, 2 ),
 		hiddenLayer_input_d = 50*9*11,
 		hiddenlayer_output_d = 500,
 		n_class = 2 )
 
 setY=[]
-for i in xrange(0, 76):
+for i in xrange(0, 51):
 	setY.append(1)
 
-instanceEx01.setData( ( 48, 54 ), 76, 76, 76, "test.mrc", "test.mrc", "test.mrc", [10,61], [10,61], [10,61], setY, setY, setY )
 
-instanceEx01.trainingStart( learning_rate = 0.1, epochN = 25, batch_size = 2 )
-instanceEx01.writeTrainingLocalMinimum( "convRecord_200epoch_Ex00.dat" )
+instanceEx01.setData( ( 48, 54 ), 51, 51, 51, "test.mrc", "test.mrc", "test.mrc", [10,61], [10,61], [10,61], setY, setY, setY )
+
+instanceEx01.trainingStart( learning_rate = 0.1, epochN = 500, batch_size = 10 )
+
+instanceEx01.writeTrainingLocalMinimum( "convRecord_Ex02.dat" )
 print( "... So I take it that the Ex02 finally works." )
