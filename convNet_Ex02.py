@@ -334,7 +334,7 @@ class ConvNet(object):
 
 
 ##---------------------------------------------------------------Nirn_Plane-------------------------------------------------------------------------------------
-#the testing sequence on MNIST
+#the testing sequence on Complex I thermoXXX
 #set random seed 
 rSeed = numpy.random.RandomState( 33466 )
 instanceEx01 = ConvNet( randomSeed = rSeed, 
