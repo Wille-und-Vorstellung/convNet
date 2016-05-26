@@ -19,7 +19,10 @@ class mergable(object):
 		self._zCounter = 0
 		self._data.set_size( nx = size[0], ny = size[1], nz = size[2] )
 		self._data.to_zero()
-		self._size = size
+		self._size = [0,0,0]
+		self._size[0] = size[0]
+		self._size[1] = size[1]
+		self._size[2] = size[2]
 
 	def mergeEM2d(self, append):
 
@@ -42,7 +45,66 @@ class mergable(object):
 		return self._size
 
 	def mergeEM3d(self, append):
-		pass
+		#append to the rail and require the 2d image be same size
+		#return a new one and change the old one as well
+		#check 
+		if ( append.get_xsize() != self._data.get_xsize() ) or ( append.get_ysize() != self._data.get_ysize() ):
+			print("error encountered, shutting down...")
+			logging.info( "invalid input 3d image size" )
+			exit()
+		#get down to bussiness
+		self._size[2] += append.get_zsize()
+		merged3d = EMData()
+		merged3d.set_size( self._data.get_xsize(), self._data.get_ysize(), self._size[2])
+		merged3d.to_zero()
+
+		for z in xrange(0, self._size[2]):
+			for x in xrange(0, self._data.get_xsize()):
+				for y in xrange(0, self._data.get_ysize()):
+					if ( z < self._data.get_zsize() ):
+						tmp = self._data.get_value_at(x,y,z)
+					else:
+						tmp = append.get_value_at(x, y, ( z - self._data.get_zsize() ) )
+					merged3d.set_value_at(x, y, z, tmp)
+
+		self._data = merged3d
+
+		logging.info("... mergeEM3d complete")
+		print("... mergeEM3d complete")
+		return merged3d
+		
+	def slice(self, sliceSize, step=1):
+		#slice into new EMData which shall replace the old one
+		#check
+		if ( sliceSize[0] >= self._data.get_xsize() ) \
+			or ( sliceSize[1] >= self._data.get_ysize() ):
+			print("error encountered, shutting down...")
+			logging.info( "invalid input slice size" )
+			exit()
+
+		multipler = [0,0]
+		multipler[0] = (self._data.get_xsize() - sliceSize[0])/step + 1
+		multipler[1] = (self._data.get_ysize() - sliceSize[1])/step + 1
+
+		sliced = EMData()
+		sliced.set_size(sliceSize[0], sliceSize[1], self._data.get_zsize()*multipler[0]*multipler[1] )
+		sliced.to_zero()
+		
+		tmpz=0
+		tmp=0
+		for z in xrange(0, self._data.get_zsize()):
+			for i in xrange(0, multipler[0]):
+				for j in xrange(0, multipler[1]):
+					for x in xrange(i*step, sliceSize[0]+i*step):
+						for y in xrange(j*step, sliceSize[1]+j*step):
+							tmp = self._data.get_value_at(x, y, z)
+							sliced.set_value_at(x-i*step, y-j*step, tmpz, tmp ) ####
+					tmpz+=1
+
+		self._data = sliced
+		logging.info("... slice done")
+		return sliced
+		
 
 	def reshape(self, newSize):#input 2-tuple
 		#check 
@@ -66,6 +128,8 @@ class mergable(object):
 					newshaped.set_value_at(x, y, z, tmp)
 
 		self._data = newshaped
+		self._size[0] = newSize[0]
+		self._size[1] = newSize[1]
 		logging.info( "... reshape complete" )
 
 def projection( path, project_step, result_path ):
@@ -107,16 +171,35 @@ def projection( path, project_step, result_path ):
 	return result
 
 def main(): #testing purpose
-	projected = projection( "test3.mrc", 90, "test3pro.mrc" )
+	projected = projection( "test3.mrc", 90, "test3proX0.mrc" )
+	projectedx = projection( "test4.mrc", 90, "test4proX0.mrc" )
 	print("... projection done")
+	'''
 	proShaped = mergable( (projected.get_xsize(), projected.get_ysize(), projected.get_zsize()) )
 	proShaped.set( projected )
 	proShaped.reshape( (218, 192) )
 	tmpEM = proShaped.get()
-	tmpEM.write_image( "test3proShaped.mrc" )
-	print("Injecting negative data")
-	
+	tmpEM.write_image( "test3proX0Shaped.mrc" )
+	'''
+	'''
+	print("mergeEM3d test")
 
+	blank = EMData()
+	blank.set_size(projected.get_xsize(), projected.get_ysize(), 64)
+	blank.to_zero()
+	mergeTest = mergable( (projected.get_xsize(), projected.get_ysize(), projected.get_zsize()) )
+	mergeTest.set( projected )
+	mergeTest.mergeEM3d( blank )
+	test3merged = mergeTest.get()
+	test3merged.write_image("test3proX0Merged.mrc")
+	'''
+	print("slice test")
+	sliceTest = mergable( (projectedx.get_xsize(), projectedx.get_ysize(), projectedx.get_zsize()) )
+	sliceTest.set( projectedx )
+	test4slice = sliceTest.slice( (92,152), step=10 )
+	test4slice.write_image("test4proX0Sliced.mrc")
+
+	print("... injecting negative data")
 	print("... let's find out how it gonna be")
 	return 117
 
