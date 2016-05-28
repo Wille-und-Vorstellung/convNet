@@ -5,6 +5,7 @@ import sys
 import os
 import numpy
 import logging
+import cPickle as pickle
 
 logging.basicConfig( filename = 'projector.log', level = logging.DEBUG )
 '''
@@ -132,6 +133,29 @@ class mergable(object):
 		self._size[1] = newSize[1]
 		logging.info( "... reshape complete" )
 
+	def subset(self, zlist): ####################
+		#check
+		if ( len(zlist) == 0  ) or ( len(zlist) > self._data.get_zsize() ):
+			print("error encountered, shutting down...")
+			logging.info( "invalid subset selection" )
+			exit()
+		#
+		subset = EMData()
+		subset.set_size( self._data.get_xsize(), self._data.get_ysize(), len(zlist) )
+		tmpz=0
+		for z in zlist:
+			for x in xrange(0, self._data.get_xsize()):
+				for y in xrange(0, self._data.get_ysize()):
+					tmp = self._data.get_value_at(x, y, z)
+					subset.set_value_at( x, y, tmpz, tmp )
+			tmpz+=1
+
+		self._data = subset
+		self._size[2] = len(zlist)
+
+		return subset
+
+
 def projection( path, project_step, result_path ):
 # return one single MRC that contain all the projections
 # project_size: 2-tuple
@@ -170,20 +194,18 @@ def projection( path, project_step, result_path ):
 	logging.info("... written to file")
 	return result
 
+
 def main(): #testing purpose
+	'''
 	projected = projection( "test3.mrc", 90, "test3proX0.mrc" )
 	projectedx = projection( "test4.mrc", 90, "test4proX0.mrc" )
 	print("... projection done")
-	'''
 	proShaped = mergable( (projected.get_xsize(), projected.get_ysize(), projected.get_zsize()) )
 	proShaped.set( projected )
 	proShaped.reshape( (218, 192) )
 	tmpEM = proShaped.get()
 	tmpEM.write_image( "test3proX0Shaped.mrc" )
-	'''
-	'''
 	print("mergeEM3d test")
-
 	blank = EMData()
 	blank.set_size(projected.get_xsize(), projected.get_ysize(), 64)
 	blank.to_zero()
@@ -192,15 +214,110 @@ def main(): #testing purpose
 	mergeTest.mergeEM3d( blank )
 	test3merged = mergeTest.get()
 	test3merged.write_image("test3proX0Merged.mrc")
-	'''
+	
 	print("slice test")
 	sliceTest = mergable( (projectedx.get_xsize(), projectedx.get_ysize(), projectedx.get_zsize()) )
 	sliceTest.set( projectedx )
 	test4slice = sliceTest.slice( (92,152), step=10 )
 	test4slice.write_image("test4proX0Sliced.mrc")
+	'''
+	print("... prepareting complex I data")
 
-	print("... injecting negative data")
+	train1 = projection( "fieldtest1part.mrc", 40, "train1.mrc" )
+	valid1 = projection( "fieldtest1part.mrc", 90, "valid1.mrc" )
+	test1 = projection( "fieldtest1whole.mrc", 90, "test1.mrc" )
+	#slice
+	tmpEM = mergable( (test1.get_xsize(), test1.get_ysize(), test1.get_zsize()) )
+	tmpEM.set( test1 )
+	test1Sliced = tmpEM.slice( ( train1.get_xsize(), train1.get_ysize()), step=40 )
+	test1Sliced.write_image( "test1Sliced.mrc" )
+	#megative data for train and validate set
+	trainNeg1 = EMData()
+	trainNeg1.set_size( train1.get_xsize(), train1.get_ysize(), 32 )
+	trainNeg1.to_zero()
+	trainNeg2 = EMData()
+	trainNeg2.set_size( train1.get_xsize(), train1.get_ysize(), 32 )
+	trainNeg2.to_value(1)
+
+
+	validNeg1 = EMData()
+	validNeg1.set_size( valid1.get_xsize(), valid1.get_ysize(), 32 )
+	validNeg1.to_value(5)
+	validNeg2 = EMData()
+	validNeg2.set_size( valid1.get_xsize(), valid1.get_ysize(), 32 )
+	validNeg2.to_value(12)
+	# merge train set and validate set
+	tmpEM = mergable( (train1.get_xsize(), train1.get_ysize(), train1.get_zsize()) )
+	tmpEM.set( train1 )
+	tmpEM.mergeEM3d( trainNeg1 )
+	tmpEM.mergeEM3d( trainNeg2 )
+	trainF1 =tmpEM.get()
+	trainF1.write_image( "trainSet1.mrc" )
+	tmpEM = mergable( (valid1.get_xsize(), valid1.get_ysize(), valid1.get_zsize()) )
+	tmpEM.set( valid1 )
+	tmpEM.mergeEM3d( validNeg1 )
+	tmpEM.mergeEM3d( validNeg2 )
+	validF1 =tmpEM.get()
+	validF1.write_image( "validSet1.mrc" )
+	#merge test set
+	tmpEM = EMData()
+	tmpEM.read_image( "test1Sliced.mrc" )
+	testPos = mergable( (train1.get_xsize(), train1.get_ysize(), train1.get_zsize()) )
+	testPos.set( tmpEM )
+	
+	#selected positive 30
+	selectedList = [2,3,4,8,9,10,16,34,38,39,40,44,48,69,79,82,88,90,94,102,110,114,118,120,126,152,154,156,232,236]
+	testPos.subset( selectedList )
+	
+	testNeg = EMData()
+	testNeg.set_size( train1.get_xsize(), train1.get_ysize(), 30 ) 
+	testNeg.to_value(1.5)
+
+	testPos.mergeEM3d( testNeg )
+	testF1 = testPos.get()
+	testF1.write_image( "testSet1.mrc" )
+	
+	print( "... constructing label vectors" )
+	trainY = []
+	validY = []
+	testY = []
+	for i in xrange(0, 793):
+		if (i < 729):
+			tmp = 1
+		else:
+			tmp =0
+		trainY.append(tmp)
+
+	for j in xrange(0, 128):
+		if (j < 64):
+			tmp = 1
+		else:
+			tmp = 0 
+		validY.append(tmp)
+
+	
+	for j in xrange(0, 60):
+		if (j < 30) :
+			tmp = 1
+		else:
+			tmp = 0 
+		testY.append(tmp)
+		
+	print("... pickling")
+	fr = open("trainY.label", "wb")
+	ft = open("testY.label", "wb")
+	fv = open("validY.label", "wb")
+
+	pickle.dump(trainY, fr)
+	pickle.dump(testY, ft)
+	pickle.dump(validY, fv)
+	
+	fr.close()
+	fv.close()
+	ft.close()
+	
 	print("... let's find out how it gonna be")
+
 	return 117
 
 main()

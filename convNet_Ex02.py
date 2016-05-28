@@ -21,6 +21,7 @@ import os
 import sys
 import timeit
 import logging
+import cPickle as pickle
 
 import numpy
 import theano
@@ -338,20 +339,30 @@ class ConvNet(object):
 #set random seed 
 rSeed = numpy.random.RandomState( 33466 )
 instanceEx01 = ConvNet( randomSeed = rSeed, 
-		filter_shape_1 = ( 20, 1, 5, 5 ), image_shape_1 = ( 10, 1, 48, 54 ), pool_size_1 = ( 2, 2 ), 
-		filter_shape_2 = ( 50, 20, 5, 4 ), image_shape_2 = ( 10, 20, 22, 25 ), pool_size_2 = ( 2, 2 ),
-		hiddenLayer_input_d = 50*9*11,
+		filter_shape_1 = ( 20, 1, 5, 5 ), image_shape_1 = ( 20, 1, 170, 124 ), pool_size_1 = ( 2, 2 ), 
+		filter_shape_2 = ( 50, 20, 4, 5 ), image_shape_2 = ( 20, 20, 83, 60 ), pool_size_2 = ( 2, 2 ),
+		hiddenLayer_input_d = 50*40*28,
 		hiddenlayer_output_d = 500,
 		n_class = 2 )
+fr = open( "trainY.label", "rb" )
+fv = open( "validY.label", "rb" )
+ft = open( "testY.label", "rb" )
 
-setY=[]
-for i in xrange(0, 51):
-	setY.append(1)
+trainLabel = pickle.load(fr)
+validLabel = pickle.load(fv)
+testLabel = pickle.load(ft)
 
+fr.close()
+fv.close()
+ft.close()
+'''
+def setData(self, imageSize, imageN_test, imageN_train, imageN_validate, 
+						testPath, trainPath, validatePath, testRange, trainRange, 
+							validateRange, testY, trainY, validateY):
+'''
+instanceEx01.setData( ( 170, 124 ), 60, 793, 128, "testSet1.mrc", "trainSet1.mrc", "validSet1.mrc", [0,60], [0,793], [0,128], testLabel, trainLabel, validLabel )
 
-instanceEx01.setData( ( 48, 54 ), 51, 51, 51, "test.mrc", "test.mrc", "test.mrc", [10,61], [10,61], [10,61], setY, setY, setY )
-
-instanceEx01.trainingStart( learning_rate = 0.1, epochN = 500, batch_size = 10 )
+instanceEx01.trainingStart( learning_rate = 0.1, epochN = 500, batch_size = 20 )
 
 instanceEx01.writeTrainingLocalMinimum( "convRecord_Ex02.dat" )
 print( "... So I take it that the Ex02 finally works." )

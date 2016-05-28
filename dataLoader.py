@@ -105,25 +105,25 @@ class dataLoader(object):
 			logging.warning( "invalid input range at loadData()" )
 		else:
 			pass
-		#reorganise
+		#reorganise # here _imageSize should equals _*_mrc's size
 		for k in xrange( testRange[0], testRange[1] ):
 			for i in xrange( 0, self._test_mrc.get_xsize() ):
 				for j in xrange( 0, self._test_mrc.get_ysize() ):
-					self._test_data_x[k - testRange[0]][i*self._imageSize[0] + j] = self._test_mrc.get_value_at(i, j, k) + 10
+					self._test_data_x[k - testRange[0]][i*self._imageSize[1] + j] = self._test_mrc.get_value_at(i, j, k)
 
 		self._test_data_y = numpy.asarray( testY, dtype='int64' )
 
 		for k in xrange( trainRange[0], trainRange[1] ):
 			for i in xrange( 0, self._train_mrc.get_xsize() ):
 				for j in xrange( 0, self._train_mrc.get_ysize() ):
-					self._train_data_x[k - testRange[0] ][i*self._imageSize[0] + j] = self._train_mrc.get_value_at(i, j, k) + 10
+					self._train_data_x[k - trainRange[0] ][i*self._imageSize[1] + j] = self._train_mrc.get_value_at(i, j, k)
 		
 		self._train_data_y = numpy.asarray( trainY, dtype='int64' )
 
 		for k in xrange( validateRange[0], validateRange[1] ):
 			for i in xrange( 0, self._validate_mrc.get_xsize() ):
 				for j in xrange( 0, self._validate_mrc.get_ysize() ):
-					self._validate_data_x[k - testRange[0] ][i*self._imageSize[0] + j] = self._validate_mrc.get_value_at(i, j, k) + 10
+					self._validate_data_x[k - validateRange[0] ][i*self._imageSize[1] + j] = self._validate_mrc.get_value_at(i, j, k)
 
 		self._validate_data_y = numpy.asarray( validateY, dtype='int64' )
 
